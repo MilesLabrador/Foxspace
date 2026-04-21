@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Foxspace</title>
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+
+  <div id="app">
+
+    <!-- Header -->
+    <header id="header">
+      <div id="header-logo">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect x="1" y="1" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.9"/>
+          <rect x="10" y="1" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.6"/>
+          <rect x="1" y="10" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.6"/>
+          <rect x="10" y="10" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.3"/>
+        </svg>
+        <span id="header-title">Foxspace</span>
+      </div>
+      <button id="btn-add-workspace" title="New workspace (Ctrl+Shift+W)" aria-label="New workspace">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Workspace + Tab List -->
+    <div id="workspace-list" role="list"></div>
+
+    <!-- Drop zone hint (shown while dragging) -->
+    <div id="drag-hint" hidden>Drop tab onto a workspace to move it</div>
+
+    <!-- Color picker popover -->
+    <div id="color-picker" hidden>
+      <div id="color-grid"></div>
+    </div>
+
+  </div>
+
+  <script src="sidebar.js"></script>
+</body>
+</html>

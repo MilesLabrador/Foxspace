@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <rect width="48" height="48" rx="10" fill="#0060df"/>
+  <!-- Top-left pane: solid -->
+  <rect x="7"  y="7"  width="15" height="15" rx="3" fill="#ffffff" opacity="1.0"/>
+  <!-- Top-right pane: medium -->
+  <rect x="26" y="7"  width="15" height="15" rx="3" fill="#ffffff" opacity="0.65"/>
+  <!-- Bottom-left pane: medium -->
+  <rect x="7"  y="26" width="15" height="15" rx="3" fill="#ffffff" opacity="0.65"/>
+  <!-- Bottom-right pane: faint -->
+  <rect x="26" y="26" width="15" height="15" rx="3" fill="#ffffff" opacity="0.3"/>
+</svg>
