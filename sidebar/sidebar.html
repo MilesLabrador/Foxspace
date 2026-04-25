@@ -28,8 +28,17 @@
       </button>
     </header>
 
-    <!-- Workspace + Tab List -->
-    <div id="workspace-list" role="list"></div>
+    <!-- Workspace Switcher -->
+    <div id="switcher-bar">
+      <div id="workspace-switcher" role="tablist"></div>
+      <div id="switcher-arrows">
+        <button id="switcher-prev" title="Previous workspace">&#8249;</button>
+        <button id="switcher-next" title="Next workspace">&#8250;</button>
+      </div>
+    </div>
+
+    <!-- Tab Pane -->
+    <div id="tab-list" role="list"></div>
 
     <!-- Drop zone hint (shown while dragging) -->
     <div id="drag-hint" hidden>Drop tab onto a workspace to move it</div>

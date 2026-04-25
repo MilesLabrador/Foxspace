@@ -14,7 +14,6 @@ let state = {
   tabs:             []
 };
 
-let expandedSet   = new Set(); // workspace IDs currently showing their tabs
 let draggedTabId  = null;
 let colorPickerWsId = null;
 
@@ -49,14 +48,11 @@ function handleMessage(msg) {
       state.activeWorkspaceId = msg.activeWorkspaceId;
       state.tabWsMap          = msg.tabWsMap ?? {};
       state.tabs              = msg.tabs ?? [];
-      // Auto-expand active workspace
-      if (state.activeWorkspaceId) expandedSet.add(state.activeWorkspaceId);
       render();
       break;
 
     case 'workspaceSwitched':
       state.activeWorkspaceId = msg.workspaceId;
-      expandedSet.add(msg.workspaceId);
       send({ type: 'getState' });
       break;
 
@@ -84,65 +80,51 @@ function tabsForWorkspace(wsId) {
 // ─── Render ───────────────────────────────────────────────────────────────────
 
 function render() {
-  const list = document.getElementById('workspace-list');
-
-  // Preserve scroll position
-  const scrollTop = list.scrollTop;
-
-  list.innerHTML = '';
-
-  for (const ws of state.workspaces) {
-    list.appendChild(buildWorkspaceRow(ws));
-
-    if (expandedSet.has(ws.id)) {
-      const wsTabs = tabsForWorkspace(ws.id);
-      if (wsTabs.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'ws-empty';
-        empty.textContent = 'No tabs';
-        list.appendChild(empty);
-      } else {
-        for (const tab of wsTabs) {
-          list.appendChild(buildTabRow(tab));
-        }
-      }
-    }
-  }
-
-  list.scrollTop = scrollTop;
+  renderSwitcher();
+  renderTabs();
 }
 
-// ─── Workspace Row ────────────────────────────────────────────────────────────
+// ─── Workspace Switcher ───────────────────────────────────────────────────────
 
-function buildWorkspaceRow(ws) {
-  const isActive   = ws.id === state.activeWorkspaceId;
-  const isExpanded = expandedSet.has(ws.id);
-  const tabCount   = tabsForWorkspace(ws.id).length;
+function renderSwitcher() {
+  const switcher = document.getElementById('workspace-switcher');
+  switcher.innerHTML = '';
+  for (const ws of state.workspaces) {
+    switcher.appendChild(buildChip(ws));
+  }
+  updateArrows();
+  // Scroll active chip into view
+  const activeChip = switcher.querySelector('.ws-chip.is-active');
+  if (activeChip) activeChip.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
 
-  const row = document.createElement('div');
-  row.className = [
-    'workspace-row',
-    isActive   ? 'is-active'   : '',
-    isExpanded ? 'is-expanded' : '',
-    ws.frozen  ? 'is-frozen'   : ''
+function buildChip(ws) {
+  const isActive = ws.id === state.activeWorkspaceId;
+  const tabCount = tabsForWorkspace(ws.id).length;
+
+  const chip = document.createElement('div');
+  chip.className = [
+    'ws-chip',
+    isActive  ? 'is-active' : '',
+    ws.frozen ? 'is-frozen' : ''
   ].join(' ').trim();
-  row.dataset.wsId = ws.id;
-  row.role = 'listitem';
-  row.title = `${ws.name} — ${tabCount} tab${tabCount !== 1 ? 's' : ''}`;
+  chip.dataset.wsId = ws.id;
+  chip.role = 'tab';
+  chip.title = `${ws.name} — ${tabCount} tab${tabCount !== 1 ? 's' : ''}`;
 
-  // Color dot
-  const colorDot = document.createElement('div');
-  colorDot.className = 'ws-color';
-  colorDot.style.background = ws.color;
-  colorDot.title = 'Change color';
-  colorDot.addEventListener('click', e => {
+  // Color dot — click to change color
+  const dot = document.createElement('div');
+  dot.className = 'ws-chip-dot';
+  dot.style.background = ws.color;
+  dot.title = 'Change color';
+  dot.addEventListener('click', e => {
     e.stopPropagation();
-    openColorPicker(ws, colorDot);
+    openColorPicker(ws, dot);
   });
 
-  // Name (double-click to rename)
-  const nameEl = document.createElement('div');
-  nameEl.className = 'ws-name';
+  // Name — double-click to rename
+  const nameEl = document.createElement('span');
+  nameEl.className = 'ws-chip-name';
   nameEl.textContent = ws.name;
   nameEl.setAttribute('contenteditable', 'false');
   nameEl.addEventListener('dblclick', e => {
@@ -152,24 +134,24 @@ function buildWorkspaceRow(ws) {
 
   // Tab count
   const countEl = document.createElement('span');
-  countEl.className = 'ws-count';
+  countEl.className = 'ws-chip-count';
   countEl.textContent = tabCount;
 
-  // Action buttons
+  // Action buttons (visible on hover / active)
   const actions = document.createElement('div');
-  actions.className = 'ws-actions';
+  actions.className = 'ws-chip-actions';
 
   const freezeBtn = document.createElement('button');
-  freezeBtn.className = 'ws-btn freeze' + (ws.frozen ? ' is-frozen' : '');
-  freezeBtn.title = ws.frozen ? 'Unfreeze workspace' : 'Freeze workspace (suspend all tabs)';
-  freezeBtn.innerHTML = '❄';
+  freezeBtn.className = 'ws-chip-btn freeze' + (ws.frozen ? ' is-frozen' : '');
+  freezeBtn.title = ws.frozen ? 'Unfreeze workspace' : 'Freeze workspace';
+  freezeBtn.textContent = '❄';
   freezeBtn.addEventListener('click', e => {
     e.stopPropagation();
     send({ type: 'freezeWorkspace', workspaceId: ws.id });
   });
 
   const deleteBtn = document.createElement('button');
-  deleteBtn.className = 'ws-btn delete';
+  deleteBtn.className = 'ws-chip-btn delete';
   deleteBtn.title = 'Delete workspace';
   deleteBtn.innerHTML = '&times;';
   deleteBtn.addEventListener('click', e => {
@@ -184,38 +166,26 @@ function buildWorkspaceRow(ws) {
   });
 
   actions.append(freezeBtn, deleteBtn);
+  chip.append(dot, nameEl, countEl, actions);
 
-  // Chevron
-  const chevron = document.createElement('span');
-  chevron.className = 'ws-chevron';
-  chevron.innerHTML = '&#9658;'; // ▶
-
-  row.append(colorDot, nameEl, countEl, actions, chevron);
-
-  // ── Row click: switch or toggle expand ──
-  row.addEventListener('click', () => {
+  // Click: switch workspace
+  chip.addEventListener('click', () => {
     if (ws.id !== state.activeWorkspaceId) {
       send({ type: 'switchWorkspace', workspaceId: ws.id });
-    } else {
-      if (expandedSet.has(ws.id)) expandedSet.delete(ws.id);
-      else expandedSet.add(ws.id);
-      render();
     }
   });
 
-  // ── Drag-over: drop tab onto workspace ──
-  row.addEventListener('dragover', e => {
+  // Drag-over: drop tab onto this workspace chip
+  chip.addEventListener('dragover', e => {
     if (draggedTabId == null) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    row.classList.add('drag-over');
+    chip.classList.add('drag-over');
   });
-
-  row.addEventListener('dragleave', () => row.classList.remove('drag-over'));
-
-  row.addEventListener('drop', e => {
+  chip.addEventListener('dragleave', () => chip.classList.remove('drag-over'));
+  chip.addEventListener('drop', e => {
     e.preventDefault();
-    row.classList.remove('drag-over');
+    chip.classList.remove('drag-over');
     if (draggedTabId != null) {
       send({ type: 'moveTab', tabId: draggedTabId, workspaceId: ws.id });
       draggedTabId = null;
@@ -223,7 +193,49 @@ function buildWorkspaceRow(ws) {
     }
   });
 
-  return row;
+  return chip;
+}
+
+// ─── Tab Pane ─────────────────────────────────────────────────────────────────
+
+function renderTabs() {
+  const list = document.getElementById('tab-list');
+  const scrollTop = list.scrollTop;
+  list.innerHTML = '';
+
+  if (!state.activeWorkspaceId) {
+    list.scrollTop = scrollTop;
+    return;
+  }
+
+  const wsTabs     = tabsForWorkspace(state.activeWorkspaceId);
+  const pinned     = wsTabs.filter(t => t.pinned);
+  const regular    = wsTabs.filter(t => !t.pinned);
+
+  if (wsTabs.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'ws-empty';
+    empty.textContent = 'No tabs';
+    list.appendChild(empty);
+  } else {
+    if (pinned.length > 0) {
+      const label = document.createElement('div');
+      label.className = 'tab-section-label';
+      label.textContent = 'Pinned';
+      list.appendChild(label);
+      for (const tab of pinned) list.appendChild(buildTabRow(tab));
+    }
+
+    if (pinned.length > 0 && regular.length > 0) {
+      const divider = document.createElement('div');
+      divider.className = 'tab-section-divider';
+      list.appendChild(divider);
+    }
+
+    for (const tab of regular) list.appendChild(buildTabRow(tab));
+  }
+
+  list.scrollTop = scrollTop;
 }
 
 // ─── Rename ───────────────────────────────────────────────────────────────────
@@ -301,7 +313,7 @@ function openColorPicker(ws, anchor) {
 
 document.addEventListener('click', e => {
   const picker = document.getElementById('color-picker');
-  if (!picker.hidden && !picker.contains(e.target) && !e.target.classList.contains('ws-color')) {
+  if (!picker.hidden && !picker.contains(e.target) && !e.target.classList.contains('ws-chip-dot')) {
     picker.hidden = true;
     colorPickerWsId = null;
   }
@@ -382,6 +394,23 @@ function buildTabRow(tab) {
 
   return row;
 }
+
+// ─── Switcher Arrows ──────────────────────────────────────────────────────────
+
+function switcherStep(dir) {
+  const idx  = state.workspaces.findIndex(ws => ws.id === state.activeWorkspaceId);
+  const next = state.workspaces[idx + dir];
+  if (next) send({ type: 'switchWorkspace', workspaceId: next.id });
+}
+
+function updateArrows() {
+  const idx = state.workspaces.findIndex(ws => ws.id === state.activeWorkspaceId);
+  document.getElementById('switcher-prev').disabled = idx <= 0;
+  document.getElementById('switcher-next').disabled = idx >= state.workspaces.length - 1;
+}
+
+document.getElementById('switcher-prev').addEventListener('click', () => switcherStep(-1));
+document.getElementById('switcher-next').addEventListener('click', () => switcherStep(1));
 
 // ─── New Workspace Button ─────────────────────────────────────────────────────
 
