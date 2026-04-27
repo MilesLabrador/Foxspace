@@ -208,9 +208,9 @@ function renderTabs() {
     return;
   }
 
-  const wsTabs     = tabsForWorkspace(state.activeWorkspaceId);
-  const pinned     = wsTabs.filter(t => t.pinned);
-  const regular    = wsTabs.filter(t => !t.pinned);
+  const pinned     = state.tabs.filter(t => t.pinned);
+  const regular    = tabsForWorkspace(state.activeWorkspaceId).filter(t => !t.pinned);
+  const wsTabs     = [...pinned, ...regular];
 
   if (wsTabs.length === 0) {
     const empty = document.createElement('div');
@@ -234,6 +234,14 @@ function renderTabs() {
 
     for (const tab of regular) list.appendChild(buildTabRow(tab));
   }
+
+  // New tab button
+  const newTabBtn = document.createElement('button');
+  newTabBtn.className = 'tab-new-btn';
+  newTabBtn.title = 'New tab';
+  newTabBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg> New Tab`;
+  newTabBtn.addEventListener('click', () => send({ type: 'newTab' }));
+  list.appendChild(newTabBtn);
 
   list.scrollTop = scrollTop;
 }

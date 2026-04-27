@@ -233,6 +233,10 @@ browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
   }
 });
 
+browser.tabs.onActivated.addListener(() => {
+  broadcast({ type: 'tabUpdated' });
+});
+
 browser.tabs.onAttached.addListener(async tabId => {
   tabWsMap[tabId] = activeWorkspaceId;
   try { await browser.sessions.setTabValue(tabId, 'workspaceId', activeWorkspaceId); } catch (_) {}
@@ -294,6 +298,10 @@ browser.runtime.onConnect.addListener(port => {
 
       case 'closeTab':
         await browser.tabs.remove(msg.tabId);
+        break;
+
+      case 'newTab':
+        await browser.tabs.create({});
         break;
 
       case 'activateTab': {
